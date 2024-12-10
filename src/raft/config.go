@@ -159,10 +159,12 @@ func (cfg *config) checkLogs(i int, m ApplyMsg) (string, bool) {
 // applier reads message from apply ch and checks that they match the log
 // contents
 func (cfg *config) applier(i int, applyCh chan ApplyMsg) {
+	Debug(dCommit, "%d commit", i)
 	for m := range applyCh {
 		if m.CommandValid == false {
 			// ignore other types of ApplyMsg
 		} else {
+			Debug(dCommit, "%d commit index=%d", i, m.CommandIndex)
 			cfg.mu.Lock()
 			err_msg, prevok := cfg.checkLogs(i, m)
 			cfg.mu.Unlock()
@@ -229,6 +231,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 			}
 
 			if err_msg == "" {
+				Debug(dCommit, "%d commit index=%d", i, m.CommandIndex)
 				cfg.mu.Lock()
 				var prevok bool
 				err_msg, prevok = cfg.checkLogs(i, m)
@@ -241,6 +244,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 			cfg.mu.Lock()
 			cfg.lastApplied[i] = m.CommandIndex
 			cfg.mu.Unlock()
+			Debug(dCommit, "%d done commit index=%d", i, cfg.lastApplied[i])
 
 			if (m.CommandIndex+1)%SnapShotInterval == 0 {
 				w := new(bytes.Buffer)
@@ -251,6 +255,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 					xlog = append(xlog, cfg.logs[i][j])
 				}
 				e.Encode(xlog)
+				Debug(dCommit, "%d prepare snapshot bytes from index=%d", i, m.CommandIndex)
 				rf.Snapshot(m.CommandIndex, w.Bytes())
 			}
 		} else {
